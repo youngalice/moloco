@@ -23,34 +23,61 @@ dat = read.csv('moloco.csv')
 
 ## Problem 1
 
-I filtered the data frame for rows that had a country_id of BDV. I grouped by site_id and counted the number of unique ids for each site_id. I then arranged it in descending order by the number of unique ids to get the site_id with the largest number of unique users in the first row of the outputted data frame.
+I filtered the data frame for rows that had a country_id of BDV.
+I grouped by site_id and counted the number of unique ids for each site_id.
+I then arranged it in descending order by the number of unique ids to get the site_id
+with the largest number of unique users in the first row of the outputted data frame.
 
 ```{r}
-dat %>% filter(country_id == 'BDV') %>% group_by(site_id) %>% summarise(unique_ids = n_distinct(user_id)) %>% arrange(desc(unique_ids))
+dat %>% filter(country_id == 'BDV') %>%
+  group_by(site_id) %>%
+  summarise(unique_ids = n_distinct(user_id)) %>%
+  arrange(desc(unique_ids))
 ```
 
 ## Problem 2
 
-I first limited the data frame to only entries that fall between the desired time frame. I then grouped by user_id and site_id so I could count the number of times each user visited each site. I arranged this data in descending order by the number of visits to get the users who visited a certain site more than 10 times in the first four rows.
+I first limited the data frame to only entries that fall between the desired time frame.
+I then grouped by user_id and site_id so I could count the number of times each user visited each site.
+I arranged this data in descending order by the number of visits to get the users who
+visited a certain site more than 10 times in the first four rows.
 
 ```{r}
-dat %>% filter(as.Date(ts) >= as.Date('2019-02-03') & as.Date(ts) <= as.Date('2019-02-04')) %>% group_by(user_id, site_id) %>% summarise(num_visits = length(ts)) %>% arrange(desc(num_visits))
+dat %>% filter(as.Date(ts) >= as.Date('2019-02-03') & as.Date(ts) <= as.Date('2019-02-04')) %>%
+  group_by(user_id, site_id) %>%
+  summarise(num_visits = length(ts)) %>%
+  arrange(desc(num_visits))
 ```
 
 ## Problem 3
 
-I grouped by user_id and selected the most recent row for each user. I then grouped by site_id to count the number of users whose last visit was to that site. I arranged this in descending order by the number of visitors to get the top 3 sites in the first 3 rows.
+I grouped by user_id and selected the most recent row for each user.
+I then grouped by site_id to count the number of users whose last visit was to that site.
+I arranged this in descending order by the number of visitors to get the top 3 sites in the first 3 rows.
 
 ```{r}
-dat %>% group_by(user_id) %>% slice(which.max(as.Date(ts))) %>% group_by(site_id) %>% summarise(num_visitors = length(user_id)) %>% arrange(desc(num_visitors))
+dat %>% group_by(user_id) %>%
+  slice(which.max(as.Date(ts))) %>%
+  group_by(site_id) %>%
+  summarise(num_visitors = length(user_id)) %>%
+  arrange(desc(num_visitors))
 ```
 
 ## Problem 4
 
-I grouped by user_id and selected each user's earliest and latest visits. For each user, I then counted the number of different site_ids they had. If this number was 1, then that means the first site they visited was also the last site they visited. If this number was 2, then their first site was not their last site. Since the first metric is the number that we are interested in, I counted the number of users whose number of different site_ids is 1.
+I grouped by user_id and selected each user's earliest and latest visits.
+For each user, I then counted the number of different site_ids they had.
+If this number was 1, then that means the first site they visited was also the last site they visited.
+If this number was 2, then their first site was not their last site.
+Since the first metric is the number that we are interested in, I counted the number of users
+whose number of different site_ids is 1.
 
 ```{r}
-dat %>% group_by(user_id) %>% slice(which.min(as.Date(ts)), which.max(as.Date(ts))) %>% summarise(diff = n_distinct(site_id)) %>% filter(diff == 1) %>% nrow
+dat %>% group_by(user_id) %>%
+  slice(which.min(as.Date(ts)), which.max(as.Date(ts))) %>%
+  summarise(diff = n_distinct(site_id)) %>%
+  filter(diff == 1) %>%
+  nrow
 ```
 
 # Regression
@@ -190,4 +217,6 @@ rmsetrain
 rmsetest
 ```
 
-I want a model that has a moderate training error and a moderate test error because I want it to to fit the trend but also be generalizable enough to perform on unseen data. Such a model is Model 6: column C ~ column A.
+I want a model that has a moderate training error and a moderate test error because
+I want it to to fit the trend but also be generalizable enough to perform on unseen data.
+Such a model is Model 6: column C ~ column A.
