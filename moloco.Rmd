@@ -23,10 +23,11 @@ dat = read.csv('moloco.csv')
 
 ## Problem 1
 
-I filtered the data frame for rows that had a country_id of BDV.
+I filtered the data frame for rows that have a country_id of BDV.
 I grouped by site_id and counted the number of unique ids for each site_id.
-I then arranged it in descending order by the number of unique ids to get the site_id
-with the largest number of unique users in the first row of the outputted data frame.
+I then arranged it in descending order by the number of unique ids to get
+the site_id with the largest number of unique users in the first row
+of the outputted data frame.
 
 ```{r}
 dat %>% filter(country_id == 'BDV') %>%
@@ -37,10 +38,13 @@ dat %>% filter(country_id == 'BDV') %>%
 
 ## Problem 2
 
-I first limited the data frame to only entries that fall between the desired time frame.
-I then grouped by user_id and site_id so I could count the number of times each user visited each site.
-I arranged this data in descending order by the number of visits to get the users who
-visited a certain site more than 10 times in the first four rows.
+I first limited the data frame to only entries that fall between
+the desired time frame.
+I then grouped by user_id and site_id so I could count the number
+of times each user visited each site.
+I arranged this data in descending order by the number of visits
+to get the users who visited a certain site more than 10 times
+in the first four rows.
 
 ```{r}
 dat %>% filter(as.Date(ts) >= as.Date('2019-02-03') & as.Date(ts) <= as.Date('2019-02-04')) %>%
@@ -52,8 +56,10 @@ dat %>% filter(as.Date(ts) >= as.Date('2019-02-03') & as.Date(ts) <= as.Date('20
 ## Problem 3
 
 I grouped by user_id and selected the most recent row for each user.
-I then grouped by site_id to count the number of users whose last visit was to that site.
-I arranged this in descending order by the number of visitors to get the top 3 sites in the first 3 rows.
+I then grouped by site_id to count the number of users whose
+last visit was to that site.
+I arranged this in descending order by the number of visitors to get
+the top 3 sites in the first 3 rows.
 
 ```{r}
 dat %>% group_by(user_id) %>%
@@ -67,10 +73,11 @@ dat %>% group_by(user_id) %>%
 
 I grouped by user_id and selected each user's earliest and latest visits.
 For each user, I then counted the number of different site_ids they had.
-If this number was 1, then that means the first site they visited was also the last site they visited.
+If this number was 1, then that means the first site they visited was also
+the last site they visited.
 If this number was 2, then their first site was not their last site.
-Since the first metric is the number that we are interested in, I counted the number of users
-whose number of different site_ids is 1.
+Since the first metric is the number that we are interested in,
+I counted the number of users whose number of different site_ids is 1.
 
 ```{r}
 dat %>% group_by(user_id) %>%
@@ -83,33 +90,59 @@ dat %>% group_by(user_id) %>%
 # Regression
 
 ```{r}
+dat2 = read.csv('dat2.csv', col.names=c('A','B','C'))
+```
+
+First, I want to see whether there are any outliers in the dataset.
+To do this, I plot each of the independent variables against column C.
+
+```{r}
+plot(dat2$A, dat2$C)
+plot(dat2$B, dat2$C)
+```
+
+We see that there is indeed an outlier, at the value of -10,000 in column C.
+We remove this value before we try to fit a model.
+
+```{r}
+no_outliers = filter(dat2, dat2$C != -10000)
+```
+
+```{r}
 library(caret)
 ```
 
-
-```{r}
-dat2 = read.csv('dat2.csv', col.names=c('one','two','three'))
-```
+I create a training set and a test set to test for overfitting.
+I select 80% of the data to be in the training set and reserve
+the remaining 20% for the test set.
 
 ```{r}
 set.seed(1000)
-partition <- createDataPartition(dat2[, 2], list = FALSE, p = 0.80)
-trainGLM <- dat2[partition, ]
-testGLM <- dat2[-partition, ]
+partition <- createDataPartition(no_outliers[, 1], list = FALSE, p = 0.80)
+trainGLM <- no_outliers[partition, ]
+testGLM <- no_outliers[-partition, ]
 ```
 
 ## Model 1
 
+For model 1, I train a generalized linear model in the gaussian family
+on column C as a function of the sum of columns A and B on the training set.
+
 ```{r}
-glm1 <- glm(three ~ one + two, family = gaussian, data = trainGLM)
+glm1 <- glm(C ~ A + B, family = gaussian, data = no_outliers)
 summary(glm1)
 ```
+
+Then, I use the model to make predictions with the testing data and
+1) compare the train rmse to the test rmse, and 2) look at the AIC value
+(found above), which are the metrics that I will be using to evaluate
+the performance of my models.
 
 ```{r}
 predict.glm1.train <- predict(glm1, type = "response")
 predict.glm1.test <- predict(glm1, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm1.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm1.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm1.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm1.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
@@ -117,84 +150,105 @@ rmsetest
 
 ## Model 2
 
+Similarly, for model 2, I train a generalized linear model on column C
+but this time as a function of the sum of columns A, B, and
+column A x column B.
+
 ```{r}
-glm2 <- glm(three ~ one + two + one:two, family = gaussian, data = trainGLM)
+glm2 <- glm(C ~ A + B + A:B, family = gaussian, data = trainGLM)
 summary(glm2)
 ```
 
 ```{r}
 predict.glm2.train <- predict(glm2, type = "response")
 predict.glm2.test <- predict(glm2, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm2.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm2.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm2.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm2.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
 ```
 
+We see that both the training and test errors are lower than those for model 1.
+Also, the AIC value is 812.7 lower. This means that model 2 is overall a better model.
+
 ## Model 3
 
+Model 3 fits column C as a function of column A x column B.
+
 ```{r}
-glm3 <- glm(three ~ one:two, family = gaussian, data = trainGLM)
+glm3 <- glm(C ~ A:B, family = gaussian, data = trainGLM)
 summary(glm3)
 ```
 
 ```{r}
 predict.glm3.train <- predict(glm3, type = "response")
 predict.glm3.test <- predict(glm3, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm3.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm3.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm3.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm3.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
 ```
 
+Both the training and test errors are higher than those for Model 2, and the AIC is higher as well. So, Model 2 is still the best model so far.
+
 ## Model 4
 
+Model 4 fits column C as the sum of column A and column A x column B.
+
 ```{r}
-glm4 <- glm(three ~ one + one:two, family = gaussian, data = trainGLM)
+glm4 <- glm(C ~ A + A:B, family = gaussian, data = trainGLM)
 summary(glm4)
 ```
 
 ```{r}
 predict.glm4.train <- predict(glm4, type = "response")
 predict.glm4.test <- predict(glm4, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm4.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm4.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm4.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm4.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
 ```
 
+Model 2 is still the best model.
+
 ## Model 5
 
+Model 5 fits column C as a function of the sum of column B and column A x column B.
+
 ```{r}
-glm5 <- glm(three ~ two + one:two, family = gaussian, data = trainGLM)
+glm5 <- glm(C ~ B + A:B, family = gaussian, data = trainGLM)
 summary(glm5)
 ```
 
 ```{r}
 predict.glm5.train <- predict(glm5, type = "response")
 predict.glm5.test <- predict(glm5, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm5.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm5.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm5.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm5.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
 ```
 
+Model 2 remains the best model.
+
 ## Model 6
 
+For Models 6 and 7 below, both train and test errors are relatively high. This makes sense because both models only use one of the variables to fit the data in column C.
+
 ```{r}
-glm6 <- glm(three ~ one, family = gaussian, data = trainGLM)
+glm6 <- glm(C ~ A, family = gaussian, data = trainGLM)
 summary(glm6)
 ```
 
 ```{r}
 predict.glm6.train <- predict(glm6, type = "response")
 predict.glm6.test <- predict(glm6, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm6.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm6.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm6.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm6.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
@@ -203,20 +257,41 @@ rmsetest
 ## Model 7
 
 ```{r}
-glm7 <- glm(three ~ two, family = gaussian, data = trainGLM)
+glm7 <- glm(C ~ B, family = gaussian, data = trainGLM)
 summary(glm7)
 ```
 
 ```{r}
 predict.glm7.train <- predict(glm7, type = "response")
 predict.glm7.test <- predict(glm7, newdata = testGLM, type = "response")
-rmsetrain <- sqrt(sum((predict.glm7.train - trainGLM$three)^2)/nrow(trainGLM))
-rmsetest <- sqrt(sum((predict.glm7.test - testGLM$three)^2)/nrow(testGLM))
+rmsetrain <- sqrt(sum((predict.glm7.train - trainGLM$C)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm7.test - testGLM$C)^2)/nrow(testGLM))
 print("Prediction error of training and test sets")
 rmsetrain
 rmsetest
 ```
 
-I want a model that has a moderate training error and a moderate test error because
-I want it to to fit the trend but also be generalizable enough to perform on unseen data.
-Such a model is Model 6: column C ~ column A.
+I want a model that captures the general trend but is also
+generalizable enough to perform on unseen data.
+Such a model is Model 2: column C ~ column A + column B + column A x column B. 
+Compared to the other 6 models, Model 2 has the lowest training error,
+test error, and AIC.
+
+We now use this selected model (Model 2) on the entire training set.
+
+```{r}
+glm2final <- glm(C ~ A + B + A:B, family = gaussian, data = no_outliers)
+```
+
+To visually compare how these predicted values compare to the actual values,
+we make a scatter plot:
+
+```{r}
+plot(fitted(glm2final), no_outliers$C)
+```
+
+We see that there is an overall upward linear trend centered around 0;
+the correlation is positive. This means that Model 2 is a good model -
+when the actual values are positive, it predicts positive values,
+and when the actual values are negative, it predicts negative values.
+Thus, Model 2 is our final model.
