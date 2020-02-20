@@ -1,0 +1,193 @@
+---
+title: "Moloco"
+author: "Alice Young"
+date: "February 19, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+```
+
+# Analytics
+
+```{r}
+dat = read.csv('moloco.csv')
+```
+
+## Problem 1
+
+I filtered the data frame for rows that had a country_id of BDV. I grouped by site_id and counted the number of unique ids for each site_id. I then arranged it in descending order by the number of unique ids to get the site_id with the largest number of unique users in the first row of the outputted data frame.
+
+```{r}
+dat %>% filter(country_id == 'BDV') %>% group_by(site_id) %>% summarise(unique_ids = n_distinct(user_id)) %>% arrange(desc(unique_ids))
+```
+
+## Problem 2
+
+I first limited the data frame to only entries that fall between the desired time frame. I then grouped by user_id and site_id so I could count the number of times each user visited each site. I arranged this data in descending order by the number of visits to get the users who visited a certain site more than 10 times in the first four rows.
+
+```{r}
+dat %>% filter(as.Date(ts) >= as.Date('2019-02-03') & as.Date(ts) <= as.Date('2019-02-04')) %>% group_by(user_id, site_id) %>% summarise(num_visits = length(ts)) %>% arrange(desc(num_visits))
+```
+
+## Problem 3
+
+I grouped by user_id and selected the most recent row for each user. I then grouped by site_id to count the number of users whose last visit was to that site. I arranged this in descending order by the number of visitors to get the top 3 sites in the first 3 rows.
+
+```{r}
+dat %>% group_by(user_id) %>% slice(which.max(as.Date(ts))) %>% group_by(site_id) %>% summarise(num_visitors = length(user_id)) %>% arrange(desc(num_visitors))
+```
+
+## Problem 4
+
+I grouped by user_id and selected each user's earliest and latest visits. For each user, I then counted the number of different site_ids they had. If this number was 1, then that means the first site they visited was also the last site they visited. If this number was 2, then their first site was not their last site. Since the first metric is the number that we are interested in, I counted the number of users whose number of different site_ids is 1.
+
+```{r}
+dat %>% group_by(user_id) %>% slice(which.min(as.Date(ts)), which.max(as.Date(ts))) %>% summarise(diff = n_distinct(site_id)) %>% filter(diff == 1) %>% nrow
+```
+
+# Regression
+
+```{r}
+library(caret)
+```
+
+
+```{r}
+dat2 = read.csv('dat2.csv', col.names=c('one','two','three'))
+```
+
+```{r}
+set.seed(1000)
+partition <- createDataPartition(dat2[, 2], list = FALSE, p = 0.80)
+trainGLM <- dat2[partition, ]
+testGLM <- dat2[-partition, ]
+```
+
+## Model 1
+
+```{r}
+glm1 <- glm(three ~ one + two, family = gaussian, data = trainGLM)
+summary(glm1)
+```
+
+```{r}
+predict.glm1.train <- predict(glm1, type = "response")
+predict.glm1.test <- predict(glm1, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm1.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm1.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 2
+
+```{r}
+glm2 <- glm(three ~ one + two + one:two, family = gaussian, data = trainGLM)
+summary(glm2)
+```
+
+```{r}
+predict.glm2.train <- predict(glm2, type = "response")
+predict.glm2.test <- predict(glm2, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm2.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm2.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 3
+
+```{r}
+glm3 <- glm(three ~ one:two, family = gaussian, data = trainGLM)
+summary(glm3)
+```
+
+```{r}
+predict.glm3.train <- predict(glm3, type = "response")
+predict.glm3.test <- predict(glm3, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm3.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm3.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 4
+
+```{r}
+glm4 <- glm(three ~ one + one:two, family = gaussian, data = trainGLM)
+summary(glm4)
+```
+
+```{r}
+predict.glm4.train <- predict(glm4, type = "response")
+predict.glm4.test <- predict(glm4, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm4.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm4.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 5
+
+```{r}
+glm5 <- glm(three ~ two + one:two, family = gaussian, data = trainGLM)
+summary(glm5)
+```
+
+```{r}
+predict.glm5.train <- predict(glm5, type = "response")
+predict.glm5.test <- predict(glm5, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm5.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm5.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 6
+
+```{r}
+glm6 <- glm(three ~ one, family = gaussian, data = trainGLM)
+summary(glm6)
+```
+
+```{r}
+predict.glm6.train <- predict(glm6, type = "response")
+predict.glm6.test <- predict(glm6, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm6.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm6.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+## Model 7
+
+```{r}
+glm7 <- glm(three ~ two, family = gaussian, data = trainGLM)
+summary(glm7)
+```
+
+```{r}
+predict.glm7.train <- predict(glm7, type = "response")
+predict.glm7.test <- predict(glm7, newdata = testGLM, type = "response")
+rmsetrain <- sqrt(sum((predict.glm7.train - trainGLM$three)^2)/nrow(trainGLM))
+rmsetest <- sqrt(sum((predict.glm7.test - testGLM$three)^2)/nrow(testGLM))
+print("Prediction error of training and test sets")
+rmsetrain
+rmsetest
+```
+
+I want a model that has a moderate training error and a moderate test error because I want it to to fit the trend but also be generalizable enough to perform on unseen data. Such a model is Model 6: column C ~ column A.
