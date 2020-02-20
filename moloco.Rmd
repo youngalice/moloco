@@ -191,7 +191,8 @@ rmsetrain
 rmsetest
 ```
 
-Both the training and test errors are higher than those for Model 2, and the AIC is higher as well. So, Model 2 is still the best model so far.
+Both the training and test errors are higher than those for Model 2,
+and the AIC is higher as well. So, Model 2 is still the best model so far.
 
 ## Model 4
 
@@ -237,7 +238,9 @@ Model 2 remains the best model.
 
 ## Model 6
 
-For Models 6 and 7 below, both train and test errors are relatively high. This makes sense because both models only use one of the variables to fit the data in column C.
+For Models 6 and 7 below, both train and test errors are relatively high.
+This makes sense because both models only use one of the variables
+to fit the data in column C.
 
 ```{r}
 glm6 <- glm(C ~ A, family = gaussian, data = trainGLM)
