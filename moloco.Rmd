@@ -280,13 +280,13 @@ Such a model is Model 2: column C ~ column A + column B + column A x column B.
 Compared to the other 6 models, Model 2 has the lowest training error,
 test error, and AIC.
 
-We now use this selected model (Model 2) on the entire training set.
+We now use this selected model (Model 2) on the entire dataset.
 
 ```{r}
 glm2final <- glm(C ~ A + B + A:B, family = gaussian, data = no_outliers)
 ```
 
-To visually compare how these predicted values compare to the actual values,
+To visualize how these predicted values compare to the actual values,
 we make a scatter plot:
 
 ```{r}
